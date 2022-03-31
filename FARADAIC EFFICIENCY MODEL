@@ -1,0 +1,13 @@
+A = 3
+f1 = 250;
+f2 = 0.980;
+j = 0:1:5000;
+asq = (j./A).^2;
+fasq = f1+asq
+fa = (asq./fasq).*f2;
+
+
+
+plot(j,fa,'k-')
+ylabel("Faradaic Efficiency")
+xlabel("Current Density A/m2")
