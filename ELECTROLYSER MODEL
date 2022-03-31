@@ -1,0 +1,73 @@
+A = 3;
+F = 96485.3329;
+z = 2;
+s = 0.185;
+t1 = 1.002;
+t2 = 8.424;
+t3 = 247.3;
+r1 = 8.05e-5;
+r2 = -2.5e-7;
+f1 = 250;
+f2 = 0.980;
+t80 = 80;
+t60 = 60;
+t50 = 50;
+t70 = 70
+t25 = 25
+j = 0:100:5000;
+deltaH = 285.85
+deltaS = 163.28/1000
+deltaG80 = deltaH-((t80+273)*deltaS)
+urev80 = (deltaG80/(z*F))*1000
+
+deltaG70 = deltaH-((t70+273)*deltaS)
+urev70 = (deltaG70/(z*F))*1000
+
+deltaG60 = deltaH-((t60+273)*deltaS)
+urev60 = (deltaG60/(z*F))*1000
+
+deltaG50 = deltaH-((t50+273)*deltaS)
+urev50 = (deltaG50/(z*F))*1000
+
+deltaG25 = deltaH-((t25+273)*deltaS)
+urev25 = (deltaG25/(z*F))*1000
+%80 C
+Tt80 = (t1 + t2/t80 + (t3/(t80^2)))/A;
+rT80 = (r1+r2*t80)/A;
+
+Ucell80 = urev80 + (s*log10((Tt80*j)+1)) + (rT80*j);
+%70C
+Tt70 = (t1 + t2/t70 + (t3/(t70^2)))/A;
+rT70 = (r1+r2*t70)/A;
+
+Ucell70 = urev70 + (s*log10((Tt70*j)+1)) + (rT70*j);
+
+%60C
+Tt60 = (t1 + t2/t60 + (t3/(t60^2)))/A;
+rT60 = (r1+r2*t60)/A;
+
+Ucell60 = urev60 + (s*log10((Tt60*j)+1)) + (rT60*j);
+
+%50C
+Tt50 = (t1 + t2/t50 + (t3/(t50^2)))/A;
+rT50 = (r1+r2*t50)/A;
+
+Ucell50 = urev50 + (s*log10((Tt50*j)+1)) + (rT50*j);
+
+%25C
+Tt25 = (t1 + t2/t25 + (t3/(t25^2)))/A;
+rT25 = (r1+r2*t25)/A;
+
+Ucell25 = urev25 + (s*log10((Tt25*j)+1)) + (rT25*j);
+
+
+plot(j,Ucell80,'k-')
+hold on
+plot(j,Ucell70,'r-')
+plot(j,Ucell60,'b-')
+plot(j,Ucell50,'m-')
+plot(j,Ucell25,'c-')
+
+legend('80C','70C','60C','50C','25C')
+ylabel("Cell Voltage V")
+xlabel("Current Density A/m2")
