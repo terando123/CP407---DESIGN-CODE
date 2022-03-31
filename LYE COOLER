@@ -1,0 +1,150 @@
+%% lye cooler
+clc
+clear
+close all ;
+
+Q = 2547.829 ; % Duty kW
+
+% Parameters
+%Water heated from 7 to 37 deg C
+T1_water = 280;
+T2_water = 280+30;
+delta_T_water = T2_water-T1_water;
+mu_water = 0.0012704; %Pa.s
+rho_water = 999.56; %kg/m3
+kf_water = 0.57864; %W/mk
+cp_water = 4.19; % kJ/kg K
+
+% lye cooled from 107 to 98 deg C
+T1_lye = 479.8; % K
+T2_lye = 474; % K
+delta_T_lye = T1_lye-T2_lye; % K
+mu_lye = 0.000678; % pa.s
+rho_lye = 1170.19; % kg/m3
+k_lye = 0.593535; % W/mk
+cp_lye = 3.464134; %kj/kgK
+
+
+%log mean temperatures
+Log_mean_Temp_1 = ((T1_lye-T2_water)-(T2_lye-T1_water))/log((T1_lye-T2_water)/(T2_lye-T1_water)); % K
+R = (T1_lye-T2_lye)/(T2_water-T1_water);
+S = (T2_water-T1_water)/(T1_lye-T1_water);
+Ft = (sqrt(R^2+1)*log((1-S)/(1-R*S))) / ((R-1)*log((2-S*(R+1-sqrt(R^2+1)))/(2-S*(R+1+sqrt(R^2+1)))));
+Log_mean_Temp_ft = Ft*Log_mean_Temp_1;
+
+%HE setup
+
+% assume a U value for lye and water 
+U = 1.237744541634025e+03; % W/m^2K^-1 water water
+
+% Estimate Area
+A_prov = Q*1000/(Log_mean_Temp_ft*U); % m^2
+
+% Choose sizes for both diameter and length of tubes
+d_i_tubes = 40E-3; % m POTENTIALLY CHANGE
+d_O_tubes = d_i_tubes +3E-3; % m POTENTIALLY CHANGE
+L = 3.66; % m POTENTIALLY CHANGE
+
+% Steel ALLOY 316 tubes as an intial material 
+% Number of tubes
+A_tube = pi*d_O_tubes*L; % m^2
+Nt = A_prov/A_tube;
+
+% Use square pitch as an initial estimate for 2 PASSES POTENTIALLY CHANGE
+K1 = 0.156;
+n1 = 2.291;
+pt = 1.25*d_O_tubes;
+
+% Calcuate Bundle diameter
+bD = d_O_tubes*(Nt/K1)^(1/n1); % m
+
+% Calculate shell diameter 
+Clearance = 53E-3; % From graph using Split-ring floating head INVESTIGATE 
+D_shell = bD + Clearance; 
+
+% Average T tube side
+Mean_lye_temp = (T1_lye+T2_lye)/2;
+
+% XSA
+XSA_tube = pi/4*d_i_tubes^2;
+% Tubes per pass 8 passes
+N_per_pass = Nt/8;
+% Total Flow area 
+A_total_flow = N_per_pass*XSA_tube; % m^2
+
+% Equivalent diameter 
+% Formula for square arrangement 
+d_equiv = (1.27/d_O_tubes)*((pt^2)-(0.785*(d_O_tubes^2)));
+
+% Tube pitch 
+Tube_pitch = 1.25*d_O_tubes;
+
+% Baffle spacing 
+Baffle_spacing = D_shell*0.4; % 2 might not be the right value
+
+% Shell cross sectional area 
+XSA_shell = ((pt-d_O_tubes)*D_shell*Baffle_spacing)/pt;
+
+
+% mass flowrate lye
+Mass_flowrate_lye = 6.71; % kg/s
+
+% steam velocity
+v_LYE = Mass_flowrate_lye/(rho_lye*A_total_flow); % ms^-1
+
+%tube side coefficient 
+Re_tube = (rho_lye*v_LYE*d_i_tubes)/mu_lye;
+Pr_tube = (cp_lye*1000*mu_lye)/k_lye;
+
+
+jh_tube = 3E-3;
+% tube transfer coefficient equivalent diamater = inside diameter
+% Nu = hi*de/kf
+ht = k_lye/d_i_tubes*jh_tube*Re_tube*Pr_tube^0.33*(mu_lye/mu_water)^0.14;
+
+% mass flowrate water 
+Mass_flowrate_water = Q/(cp_water*delta_T_water) %kg/s
+
+% mass velocity shell side
+Gs = Mass_flowrate_water/XSA_shell;
+
+%shell velocity = mass velocity/density
+vs = Gs/rho_water;
+
+%  25% baffle cut 
+jh_shell = 3e-3;
+
+% shell side Coefficient calculation 
+
+% Mean shell temp
+mean_water_temp = (T1_water+T2_water)/2;
+rho_water = 999.56; % kg/m^3
+mu_water = 0.0012704; % Pas
+kf_water = 0.57864; % W/mK
+Re_shell = (Gs*d_equiv)/mu_water;
+Pr_shell = (cp_water*1000*mu_water)/kf_water;
+
+% Nu_shell = jh_shell*Re_shell*Pr_shell^0.33*(mu_H20/mu_H2)^0.14;
+hs = (kf_water/d_equiv)*jh_shell*Re_shell*(Pr_shell^0.33)*((mu_lye/mu_water)^0.14); 
+
+
+
+
+% Overall heat transfer coefficient 
+hsd = 6000; % shell dirt coefficient riverwater DOUBLE CHECK 
+kw = 16.3; % thermal conductivity of tubes ROOM TEMP
+htd = 4000; % Tube dirt coefficient
+one_over_U = 1/hs + 1/hsd + (d_O_tubes*log(d_O_tubes/d_i_tubes))/(2*kw) + (d_O_tubes/d_i_tubes)*1/htd + (d_O_tubes/d_i_tubes)*1/ht
+
+
+U_new = 1/one_over_U 
+
+% tube side pressure drop 
+m = 0.14
+jf_tubes = 3E-3 %% double check graph reading
+effL = L-2*(d_O_tubes-d_i_tubes) % probably not correct
+delta_P_tubes = 2*(8*jf_tubes*(effL/d_i_tubes)*((mu_lye/mu_water)^(-m))+2.5)*(rho_lye*(v_LYE^2))/2
+
+%shell side pressure drop
+jf_shell = 4e-2
+delta_P_shell = 8*jf_shell*(D_shell/d_equiv)*(L/Baffle_spacing)*((rho_water*(vs^2))/2)*(mu_lye/mu_water)^-0.14
